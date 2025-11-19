@@ -212,9 +212,9 @@ app.post('/api/scan', async (req, res) => {
     });
 
     async function getInternalLinks(page, baseUrl) {
-      const anchors = await page.$$eval('a[href]', links =>
-        links.map(link => link.href).filter(href => href.startsWith(baseUrl))
-      );
+      const anchors = await page.$$eval('a[href]', (links, base) =>
+        links.map(link => link.href).filter(href => href.startsWith(base))
+      , baseUrl);
       return anchors.map(url => url.split('#')[0]); // remove fragments
     }
 
