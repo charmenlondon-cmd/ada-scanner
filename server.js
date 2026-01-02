@@ -309,6 +309,9 @@ app.post('/api/scan', async (req, res) => {
     const scanDuration = Math.round((Date.now() - startTime) / 1000);
     const complianceScore = Math.max(0, 100 - violations.length * 5);
 
+    // Convert visited Set to array for storage in Google Sheets
+    const scannedPageUrls = Array.from(visited);
+
     return res.status(200).json({
       violations,
       complianceScore,
@@ -318,6 +321,7 @@ app.post('/api/scan', async (req, res) => {
       moderate_count: violations.filter(v => v.impact === "moderate").length,
       minor_count: violations.filter(v => v.impact === "minor").length,
       pages_scanned: visited.size,
+      scanned_page_urls: scannedPageUrls,
       max_pages: pageLimit,
       scan_id: scan_id,
       success: true,
