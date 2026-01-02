@@ -216,9 +216,13 @@ app.post('/api/scan', async (req, res) => {
     });
 
     async function getInternalLinks(page, baseUrl) {
+      // Extract base domain (e.g., "https://example.com/page" -> "https://example.com")
+      const url = new URL(baseUrl);
+      const baseDomain = `${url.protocol}//${url.hostname}`;
+
       const anchors = await page.$$eval('a[href]', (links, base) =>
         links.map(link => link.href).filter(href => href.startsWith(base))
-      , baseUrl);
+      , baseDomain);
       return anchors.map(url => url.split('#')[0]); // remove fragments
     }
 
