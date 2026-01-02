@@ -175,10 +175,14 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
 
 app.post('/api/scan', async (req, res) => {
   try {
-    const { website_url, customer_id, email, company_name, plan, max_pages } = req.body;
+    const { website_url, customer_id, scan_id, email, company_name, plan, max_pages } = req.body;
 
     if (!website_url) {
       return res.status(400).json({ success: false, error: 'website_url is required' });
+    }
+
+    if (!scan_id) {
+      return res.status(400).json({ success: false, error: 'scan_id is required' });
     }
 
     // Set page limit - default to 50, but allow override (e.g., 3 for free tier)
@@ -251,8 +255,8 @@ app.post('/api/scan', async (req, res) => {
         // Extract violations
         result.violations.forEach((v, i) => {
           violations.push({
-            violation_id: `VIO_${Date.now()}_${i}`,
-            scan_id: `SCAN_${Date.now()}`,
+            violation_id: `VIO_${scan_id.replace('SCAN_', '')}_${violations.length}`,
+            scan_id: scan_id,
             customer_id,
             page_url: currentUrl,
             rule_id: v.id,
@@ -311,7 +315,7 @@ app.post('/api/scan', async (req, res) => {
       minor_count: violations.filter(v => v.impact === "minor").length,
       pages_scanned: visited.size,
       max_pages: pageLimit,
-      scan_id: `SCAN_${Date.now()}`,
+      scan_id: scan_id,
       success: true,
       customer_id,
       email,
