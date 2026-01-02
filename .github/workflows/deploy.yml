@@ -8,43 +8,43 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
-      steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT }}
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT }}
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
-      - name: Build Docker image
-        run: |
-          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:${{ github.sha }} \
-                       -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest .
+    - name: Build Docker image
+      run: |
+        docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:${{ github.sha }} \
+                     -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest .
 
-      - name: Push Docker image to Artifact Registry
-        run: |
-          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:${{ github.sha }}
-          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest
+    - name: Push Docker image to Artifact Registry
+      run: |
+        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:${{ github.sha }}
+        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest
 
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy ada-scanner \
-            --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --memory 2Gi \
-            --cpu 1 \
-            --concurrency 1 \
-            --max-instances 10 \
-            --timeout 900 \
-            --set-env-vars ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy ada-scanner \
+          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --memory 2Gi \
+          --cpu 1 \
+          --concurrency 1 \
+          --max-instances 10 \
+          --timeout 900 \
+          --set-env-vars ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
