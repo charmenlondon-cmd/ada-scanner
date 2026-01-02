@@ -22,23 +22,23 @@ name: Deploy to Cloud Run
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
       - name: Build Docker image
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT }}/ada-scanner:${{ github.sha }} \
-                       -t gcr.io/${{ secrets.GCP_PROJECT }}/ada-scanner:latest .
+          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:${{ github.sha }} \
+                       -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest .
 
-      - name: Push Docker image to GCR
+      - name: Push Docker image to Artifact Registry
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT }}/ada-scanner:${{ github.sha }}
-          docker push gcr.io/${{ secrets.GCP_PROJECT }}/ada-scanner:latest
+          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:${{ github.sha }}
+          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ada-scanner \
-            --image gcr.io/${{ secrets.GCP_PROJECT }}/ada-scanner:latest \
+            --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ada-scanner/ada-scanner:latest \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
