@@ -274,8 +274,8 @@ app.post('/api/scan', async (req, res) => {
           });
         });
 
-        // Get internal links for crawling
-        const internalLinks = await getInternalLinks(page, website_url);
+        // Get internal links for crawling (use currentUrl to handle redirects properly)
+        const internalLinks = await getInternalLinks(page, currentUrl);
         internalLinks.forEach(link => {
           if (!visited.has(link)) toVisit.add(link);
         });
