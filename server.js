@@ -50,6 +50,8 @@ VIOLATION REVIEW:
 - Prioritize the axe-core violations by real-world impact
 - Provide specific code fixes where possible
 
+CRITICAL: Return ONLY a valid JSON object. No markdown, no code fences, no explanatory text before or after. All string values must have quotes properly escaped. Ensure all arrays and objects are properly closed.
+
 Return a JSON object with:
 {
   "summary": "2-3 sentence overview of accessibility state",
@@ -89,7 +91,9 @@ Return a JSON object with:
   "estimated_fix_time": "Total time for all critical and serious issues"
 }
 
-Be specific, actionable, and focus on real accessibility impact. Don't flag issues that aren't actually problems.`;
+Be specific, actionable, and focus on real accessibility impact. Don't flag issues that aren't actually problems.
+
+IMPORTANT: Your response must be ONLY the JSON object above. Do not include any text before or after the JSON. Do not wrap it in markdown code fences. Ensure all quotes inside strings are properly escaped with backslashes.`;
 
 // Function to run Basic AI analysis
 async function runBasicAIAnalysis(violations) {
