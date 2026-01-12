@@ -328,8 +328,9 @@ app.post('/api/scan', async (req, res) => {
     const scanDuration = Math.round((Date.now() - startTime) / 1000);
     const complianceScore = Math.max(0, 100 - violations.length * 5);
 
-    // Convert visited Set to array for storage in Google Sheets
-    const scannedPageUrls = Array.from(visited);
+    // Convert visited Set to comma-separated string for Google Sheets storage
+    // This prevents JSON.stringify issues when writing to sheets
+    const scannedPageUrls = Array.from(visited).join(',');
 
     return res.status(200).json({
       violations,
