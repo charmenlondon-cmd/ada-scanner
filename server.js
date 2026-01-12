@@ -102,7 +102,7 @@ async function runBasicAIAnalysis(violations) {
     }));
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 1024,
       messages: [
         {
@@ -121,6 +121,12 @@ async function runBasicAIAnalysis(violations) {
     return { summary: responseText, priority_fixes: [], estimated_fix_time: "Unable to estimate" };
   } catch (error) {
     console.error('Basic AI analysis error:', error.message);
+    console.error('Full error details:', {
+      type: error.type,
+      status: error.status,
+      message: error.message,
+      error: error.error
+    });
     return null;
   }
 }
@@ -137,7 +143,7 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
     }));
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 2048,
       messages: [
         {
@@ -169,6 +175,12 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
     return { summary: responseText, visual_issues: [], content_issues: [], priority_fixes: [] };
   } catch (error) {
     console.error('Advanced AI analysis error:', error.message);
+    console.error('Full error details:', {
+      type: error.type,
+      status: error.status,
+      message: error.message,
+      error: error.error
+    });
     return null;
   }
 }
@@ -312,16 +324,25 @@ app.post('/api/scan', async (req, res) => {
     // Run AI analysis based on plan
     let ai_analysis = null;
 
+    console.log(`[AI] aiLevel: ${aiLevel}, violations: ${violations.length}, screenshot: ${!!homepageScreenshot}, html: ${!!homepageHtml}`);
+
     if (aiLevel === 'basic' && violations.length > 0) {
-      console.log('Running basic AI analysis...');
+      console.log('[AI] Running basic AI analysis...');
       ai_analysis = await runBasicAIAnalysis(violations);
+      console.log('[AI] Basic AI result:', ai_analysis ? 'success' : 'null');
     } else if (aiLevel === 'advanced') {
-      console.log('Running advanced AI analysis...');
+      console.log('[AI] Running advanced AI analysis...');
       if (homepageScreenshot && homepageHtml) {
+        console.log('[AI] Using advanced AI with screenshot');
         ai_analysis = await runAdvancedAIAnalysis(homepageScreenshot, homepageHtml, violations);
+        console.log('[AI] Advanced AI result:', ai_analysis ? 'success' : 'null');
       } else if (violations.length > 0) {
         // Fallback to basic if screenshot capture failed
+        console.log('[AI] Screenshot missing, falling back to basic AI');
         ai_analysis = await runBasicAIAnalysis(violations);
+        console.log('[AI] Basic AI fallback result:', ai_analysis ? 'success' : 'null');
+      } else {
+        console.log('[AI] No violations and no screenshot, skipping AI analysis');
       }
     }
 
