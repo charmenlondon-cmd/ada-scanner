@@ -216,13 +216,25 @@ app.post('/api/scan', async (req, res) => {
     });
 
     async function getInternalLinks(page, baseUrl) {
-      // Extract base domain (e.g., "https://example.com/page" -> "https://example.com")
+      // Extract base domain and normalize (remove www for comparison)
       const url = new URL(baseUrl);
-      const baseDomain = `${url.protocol}//${url.hostname}`;
+      const baseHostname = url.hostname.replace(/^www\./, ''); // Remove www for comparison
 
-      const anchors = await page.$$eval('a[href]', (links, base) =>
-        links.map(link => link.href).filter(href => href.startsWith(base))
-      , baseDomain);
+      const anchors = await page.$$eval('a[href]', (links, baseHost) => {
+        return links
+          .map(link => link.href)
+          .filter(href => {
+            try {
+              const linkUrl = new URL(href);
+              // Compare hostnames without www (handles www.site.com vs site.com)
+              const linkHostname = linkUrl.hostname.replace(/^www\./, '');
+              return linkHostname === baseHost;
+            } catch {
+              return false; // Invalid URL
+            }
+          });
+      }, baseHostname);
+
       return anchors.map(url => url.split('#')[0]); // remove fragments
     }
 
@@ -235,7 +247,7 @@ app.post('/api/scan', async (req, res) => {
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
-        await page.goto(currentUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.goto(currentUrl, { waitUntil: "networkidle2", timeout: 30000 });
 
         // Capture screenshot and HTML for homepage (first page) if advanced AI
         if (visited.size === 0 && aiLevel === 'advanced') {
@@ -276,6 +288,13 @@ app.post('/api/scan', async (req, res) => {
 
         // Get internal links for crawling (use currentUrl to handle redirects properly)
         const internalLinks = await getInternalLinks(page, currentUrl);
+
+        // Debug logging for troubleshooting
+        console.log(`[SCAN] Visited: ${currentUrl}`);
+        console.log(`[SCAN] Found ${internalLinks.length} internal links`);
+        console.log(`[SCAN] Sample links:`, internalLinks.slice(0, 3));
+        console.log(`[SCAN] Progress: ${visited.size}/${pageLimit} pages, ${toVisit.size} queued`);
+
         internalLinks.forEach(link => {
           if (!visited.has(link)) toVisit.add(link);
         });
