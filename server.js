@@ -144,7 +144,7 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         {
           role: "user",
@@ -167,10 +167,40 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
     });
 
     const responseText = message.content[0].text;
-    // Extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+
+    // Extract JSON from response (handle markdown code fences)
+    let jsonText = responseText;
+
+    // Remove markdown code fences if present
+    if (jsonText.includes('```json')) {
+      const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
+      }
+    } else if (jsonText.includes('```')) {
+      const codeMatch = jsonText.match(/```\s*([\s\S]*?)\s*```/);
+      if (codeMatch) {
+        jsonText = codeMatch[1];
+      }
+    }
+
+    // Extract JSON object
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError.message);
+        console.error('Attempted to parse:', jsonMatch[0].substring(0, 500));
+        // Return partial data with error note
+        return {
+          summary: 'AI analysis generated but could not be parsed. Please contact support.',
+          visual_issues: [],
+          content_issues: [],
+          priority_fixes: [],
+          _parseError: parseError.message
+        };
+      }
     }
     return { summary: responseText, visual_issues: [], content_issues: [], priority_fixes: [] };
   } catch (error) {
