@@ -408,7 +408,7 @@ app.post('/api/scan', async (req, res) => {
       scan_date: new Date().toISOString(),
       scan_duration_seconds: scanDuration,
       status: "completed",
-      scanner_version: "axe-core + puppeteer + claude v2.0 (Railway)",
+      scanner_version: "axe-core 4.10.0 + puppeteer + Claude Sonnet 4.5 (Cloud Run)",
       scan_method: "Self-hosted Puppeteer + axe-core + Claude AI",
       ai_analysis,
       ai_level: aiLevel
@@ -428,7 +428,7 @@ app.post('/api/scan', async (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'ada-scanner-railway' });
+  res.status(200).json({ status: 'ok', service: 'ada-scanner-cloud-run' });
 });
 
 const PORT = process.env.PORT || 3000;
