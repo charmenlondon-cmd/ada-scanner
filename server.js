@@ -381,6 +381,23 @@ app.post('/api/scan', async (req, res) => {
     }
 
     const scanDuration = Math.round((Date.now() - startTime) / 1000);
+
+    // Check if any pages were actually scanned
+    if (visited.size === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to access website',
+        error_details: 'The website could not be reached. Please check that the URL is correct and the website is accessible. Common issues: invalid domain, website is down, or website blocks automated scanning.',
+        website_url,
+        pages_scanned: 0,
+        scan_id,
+        customer_id,
+        email,
+        company_name,
+        plan
+      });
+    }
+
     const complianceScore = Math.max(0, 100 - violations.length * 5);
 
     // Convert visited Set to comma-separated string for Google Sheets storage
