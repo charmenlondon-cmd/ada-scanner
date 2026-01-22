@@ -22,78 +22,82 @@ const BASIC_AI_PROMPT = `Analyze these accessibility violations and provide a JS
 
 Keep explanations simple and actionable. Focus on the most impactful issues first.`;
 
-const ADVANCED_AI_PROMPT = `Analyze this webpage for accessibility issues that automated testing cannot detect.
+const OPTIMIZED_ADVANCED_AI_PROMPT = `Analyze this webpage for accessibility issues that AUTOMATED TESTING CANNOT DETECT.
 
 You have:
 1. A screenshot of the page
-2. The page's HTML content
-3. Violations already found by axe-core automated testing
+2. Complete structured accessibility data extracted from the HTML
 
-Analyze for these WCAG requirements that axe-core CANNOT detect:
+IMPORTANT: This website has already been scanned with axe-core automated testing tool. Axe-core has ALREADY checked and reported on the following issues (DO NOT re-analyze these):
 
-VISUAL ANALYSIS (from screenshot):
-- Touch target sizes (must be minimum 44x44 pixels for mobile)
-- Text readability over backgrounds (beyond just contrast ratio)
-- Visual hierarchy and focus indicator visibility
-- Images containing text that should be real text
-- Content spacing and layout issues
+AUTOMATED CHECKS ALREADY COMPLETED BY AXE-CORE:
+✓ Link text (links without discernible text, empty links)
+✓ Image alt text (missing alt attributes, empty alt text)
+✓ Color contrast ratios (text vs background contrast, WCAG AA/AAA compliance)
+✓ Form labels (inputs without labels, missing label associations)
+✓ Button names (buttons without accessible names)
+✓ ARIA attributes (invalid ARIA roles, missing ARIA labels, incorrect ARIA usage)
+✓ Page structure (missing <main> landmark, missing h1, duplicate IDs)
+✓ Heading hierarchy (skipped heading levels, multiple h1s)
+✓ Landmark regions (content not in landmarks, missing navigation landmarks)
+✓ HTML lang attribute (missing or invalid lang declarations)
+✓ Keyboard accessibility (skip links, focusable elements)
+✓ Document title (missing or empty <title> tags)
+✓ Table structure (missing table headers, invalid table markup)
+✓ List structure (improper list markup)
 
-CONTENT ANALYSIS (from HTML):
-- Reading level (target Grade 8 for general audiences)
-- Link text clarity (flag "click here", "read more", "learn more" without context)
-- Heading structure logic (H1→H2→H3 should be hierarchical, not skip levels)
-- Form label clarity and helpfulness
-- Error message quality
-- Instructions that rely on sensory characteristics ("click the red button")
+DO NOT analyze any of the above issues. Axe-core has already detected and reported them.
 
-VIOLATION REVIEW:
-- Prioritize the axe-core violations by real-world impact
-- Provide specific code fixes where possible
+FOCUS ONLY ON THESE ISSUES (which automated tools CANNOT detect):
 
-CRITICAL: Return ONLY a valid JSON object. No markdown, no code fences, no explanatory text before or after. All string values must have quotes properly escaped. Ensure all arrays and objects are properly closed.
+1. VISUAL ANALYSIS (from screenshot only):
+   - Touch target sizes: Are interactive elements at least 44x44 pixels? Measure visible buttons, links, and icons in the screenshot
+   - Focus indicators: Are keyboard focus outlines visible and meet 3:1 contrast? Can you see them in the screenshot?
+   - Text in images: Is there text that's part of an image file instead of real HTML text?
+   - Visual layout: Is content overlapping, spacing inadequate, or layout confusing?
 
-Return a JSON object with:
+2. CONTENT QUALITY ANALYSIS (from structured data):
+   - Reading level: Analyze textContent field. Calculate Flesch-Kincaid grade level. Target is Grade 8 for general audiences.
+   - Placeholder-only labels: Check formElements where hasPlaceholderOnly=true (placeholders disappear on focus, violating WCAG)
+   - Generic link text: Check interactiveElements where isGeneric=true ("click here", "read more" without context)
+   - Error message quality: Check errorElements - are messages helpful and actionable? Do they explain HOW to fix the error?
+   - Sensory instructions: Check sensoryInstructions array for text relying only on color/position (e.g., "click the red button", "item on the right")
+
+CRITICAL RULES:
+- If axe-core would detect it, DO NOT mention it
+- Be specific to THIS page - use exact locations and examples from the data provided
+- Only flag REAL problems that affect users - not theoretical issues
+- Provide actionable fixes with code examples
+
+Return ONLY valid JSON (no markdown, no code fences, no text before or after):
 {
-  "summary": "2-3 sentence overview of accessibility state",
+  "summary": "1-2 sentence overview of issues that automated testing missed (not issues axe-core found)",
   "visual_issues": [
     {
-      "type": "touch_target|text_in_image|focus_indicator|readability|layout",
-      "description": "What the issue is",
-      "location": "Where on the page (be specific)",
-      "wcag_criterion": "e.g., 2.5.5 Target Size",
-      "recommendation": "How to fix it"
+      "type": "touch_target|focus_indicator|text_in_image|layout",
+      "description": "Specific issue with exact location from screenshot",
+      "location": "Precise location (e.g., 'Top navigation phone number link at coordinates X,Y')",
+      "wcag_criterion": "Full criterion (e.g., 2.5.5 Target Size - Level AAA)",
+      "recommendation": "Specific fix with CSS example: button { min-width: 44px; min-height: 44px; }"
     }
   ],
   "content_issues": [
     {
-      "type": "reading_level|link_text|heading_structure|form_labels|error_messages|sensory_instructions",
-      "description": "What the issue is",
-      "examples": ["specific examples from the page"],
-      "wcag_criterion": "e.g., 3.1.5 Reading Level",
-      "recommendation": "How to fix it"
-    }
-  ],
-  "priority_fixes": [
-    {
-      "rank": 1,
-      "issue": "Brief description",
-      "impact": "critical|serious|moderate|minor",
-      "explanation": "Why this matters for users",
-      "fix": "Specific fix with code example if applicable",
-      "estimated_time": "e.g., 30 minutes"
+      "type": "reading_level|placeholder_labels|generic_links|error_messages|sensory_instructions",
+      "description": "Specific issue",
+      "examples": ["Exact quotes from textContent or formElements data"],
+      "wcag_criterion": "Full criterion (e.g., 3.1.5 Reading Level - Level AAA)",
+      "recommendation": "Before/after example showing simplified text"
     }
   ],
   "reading_level": {
-    "current": "e.g., Grade 12",
+    "current": "Grade X (calculated from textContent using Flesch-Kincaid or similar)",
     "target": "Grade 8",
-    "recommendation": "Specific suggestions to simplify"
-  },
-  "estimated_fix_time": "Total time for all critical and serious issues"
+    "recommendation": "Specific examples: 'Change \\"initiated\\" to \\"started\\", \\"utilize\\" to \\"use\\"'"
+  }
 }
 
-Be specific, actionable, and focus on real accessibility impact. Don't flag issues that aren't actually problems.
-
-IMPORTANT: Your response must be ONLY the JSON object above. Do not include any text before or after the JSON. Do not wrap it in markdown code fences. Ensure all quotes inside strings are properly escaped with backslashes.`;
+REMEMBER: Do not duplicate what axe-core already found. Focus only on visual inspection and semantic content quality that requires human judgment.`;
 
 // Function to run Basic AI analysis
 async function runBasicAIAnalysis(violations) {
@@ -136,19 +140,34 @@ async function runBasicAIAnalysis(violations) {
 }
 
 // Function to run Advanced AI analysis
-async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
+async function runAdvancedAIAnalysis(screenshot, accessibilityData) {
   try {
-    const violationSummary = violations.map(v => ({
-      rule: v.rule_id,
-      impact: v.impact,
-      description: v.description,
-      element: v.element_selector,
-      page: v.page_url
-    }));
+    const formattedData = `
+COMPLETE PAGE TEXT (for reading level analysis):
+${accessibilityData.textContent}
+
+STATISTICS:
+- Total forms: ${accessibilityData.stats.totalForms}
+- Total buttons: ${accessibilityData.stats.totalButtons}
+- Total links: ${accessibilityData.stats.totalLinks}
+- Inputs with placeholder-only labels: ${accessibilityData.stats.hasPlaceholderOnlyInputs}
+
+FORM ELEMENTS (ALL ${accessibilityData.formElements.length} inputs captured):
+${JSON.stringify(accessibilityData.formElements, null, 2)}
+
+INTERACTIVE ELEMENTS (first 50 of ${accessibilityData.interactiveElements.length}):
+${JSON.stringify(accessibilityData.interactiveElements.slice(0, 50), null, 2)}
+
+ERROR/VALIDATION ELEMENTS:
+${JSON.stringify(accessibilityData.errorElements, null, 2)}
+
+POTENTIAL SENSORY INSTRUCTIONS:
+${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
+`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
+      max_tokens: 1536,
       messages: [
         {
           role: "user",
@@ -163,7 +182,7 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
             },
             {
               type: "text",
-              text: `${ADVANCED_AI_PROMPT}\n\nHTML Content (truncated to key elements):\n${htmlContent.substring(0, 8000)}\n\nAxe-core violations found:\n${JSON.stringify(violationSummary, null, 2)}`
+              text: `${OPTIMIZED_ADVANCED_AI_PROMPT}\n\n${formattedData}`
             }
           ]
         }
@@ -175,7 +194,6 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
     // Extract JSON from response (handle markdown code fences)
     let jsonText = responseText;
 
-    // Remove markdown code fences if present
     if (jsonText.includes('```json')) {
       const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
@@ -188,7 +206,6 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
       }
     }
 
-    // Extract JSON object
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
@@ -196,17 +213,15 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
       } catch (parseError) {
         console.error('JSON parse error:', parseError.message);
         console.error('Attempted to parse:', jsonMatch[0].substring(0, 500));
-        // Return partial data with error note
         return {
           summary: 'AI analysis generated but could not be parsed. Please contact support.',
           visual_issues: [],
           content_issues: [],
-          priority_fixes: [],
           _parseError: parseError.message
         };
       }
     }
-    return { summary: responseText, visual_issues: [], content_issues: [], priority_fixes: [] };
+    return { summary: responseText, visual_issues: [], content_issues: [] };
   } catch (error) {
     console.error('Advanced AI analysis error:', error.message);
     console.error('Full error details:', {
@@ -217,6 +232,86 @@ async function runAdvancedAIAnalysis(screenshot, htmlContent, violations) {
     });
     return null;
   }
+}
+
+// Extract structured accessibility data from page for AI analysis
+async function extractAccessibilityData(page) {
+  const data = await page.evaluate(() => {
+    // 1. Extract ALL text content for reading level analysis
+    const allText = document.body.innerText || document.body.textContent;
+
+    // 2. Extract ALL form elements (inputs, textareas, selects)
+    const formElements = Array.from(document.querySelectorAll('input, textarea, select')).map(el => ({
+      type: el.type || el.tagName.toLowerCase(),
+      placeholder: el.placeholder || null,
+      label: el.labels?.[0]?.textContent || null,
+      ariaLabel: el.getAttribute('aria-label') || null,
+      ariaLabelledby: el.getAttribute('aria-labelledby') || null,
+      name: el.name || null,
+      required: el.required || false,
+      hasPlaceholderOnly: !!(el.placeholder && !el.labels?.length && !el.getAttribute('aria-label'))
+    }));
+
+    // 3. Extract ALL buttons and links (for context analysis)
+    const interactiveElements = Array.from(document.querySelectorAll('button, a[href]')).map(el => ({
+      tag: el.tagName.toLowerCase(),
+      text: el.textContent?.trim() || null,
+      ariaLabel: el.getAttribute('aria-label') || null,
+      href: el.href || null,
+      isGeneric: ['click here', 'read more', 'learn more', 'click', 'here'].includes(
+        el.textContent?.trim().toLowerCase()
+      )
+    }));
+
+    // 4. Extract ALL error/validation messages
+    const errorElements = Array.from(document.querySelectorAll(
+      '[role="alert"], [aria-invalid="true"], .error, .error-message, [aria-live="polite"], [aria-live="assertive"]'
+    )).map(el => ({
+      role: el.getAttribute('role'),
+      text: el.textContent?.trim(),
+      ariaLive: el.getAttribute('aria-live')
+    }));
+
+    // 5. Extract heading structure (for semantic analysis)
+    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(el => ({
+      level: parseInt(el.tagName[1]),
+      text: el.textContent?.trim()
+    }));
+
+    // 6. Check for sensory-dependent instructions in visible text
+    const textNodes = [];
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    let node;
+    while (node = walker.nextNode()) {
+      const text = node.textContent.trim();
+      if (text && /\b(red|green|blue|left|right|above|below|top|bottom)\s+(button|link|icon|item)/i.test(text)) {
+        textNodes.push(text);
+      }
+    }
+
+    return {
+      textContent: allText.substring(0, 10000),
+      formElements: formElements,
+      interactiveElements: interactiveElements.slice(0, 100),
+      errorElements: errorElements,
+      headings: headings,
+      sensoryInstructions: textNodes,
+      stats: {
+        totalForms: formElements.length,
+        totalButtons: interactiveElements.filter(el => el.tag === 'button').length,
+        totalLinks: interactiveElements.filter(el => el.tag === 'a').length,
+        totalHeadings: headings.length,
+        hasPlaceholderOnlyInputs: formElements.filter(el => el.hasPlaceholderOnly).length
+      }
+    };
+  });
+
+  return data;
 }
 
 app.post('/api/scan', async (req, res) => {
@@ -243,9 +338,9 @@ app.post('/api/scan', async (req, res) => {
     const violations = [];
     const startTime = Date.now();
 
-    // For advanced AI: capture screenshot and HTML of homepage
+    // For advanced AI: capture screenshot and structured data of homepage
     let homepageScreenshot = null;
-    let homepageHtml = null;
+    let homepageData = null;
 
     // Launch browser with Railway-optimized settings
     const browser = await puppeteer.launch({
@@ -295,13 +390,14 @@ app.post('/api/scan', async (req, res) => {
         await page.setViewport({ width: 1280, height: 800 });
         await page.goto(currentUrl, { waitUntil: "networkidle2", timeout: 30000 });
 
-        // Capture screenshot and HTML for homepage (first page) if advanced AI
+        // Capture screenshot and extract structured data for homepage (first page) if advanced AI
         if (visited.size === 0 && aiLevel === 'advanced') {
           homepageScreenshot = await page.screenshot({
             encoding: 'base64',
-            fullPage: false // Just viewport for faster processing
+            fullPage: false
           });
-          homepageHtml = await page.content();
+          homepageData = await extractAccessibilityData(page);
+          console.log('[EXTRACTION] Stats:', homepageData.stats);
         }
 
         // Load axe-core from CDN
@@ -358,7 +454,7 @@ app.post('/api/scan', async (req, res) => {
     // Run AI analysis based on plan
     let ai_analysis = null;
 
-    console.log(`[AI] aiLevel: ${aiLevel}, violations: ${violations.length}, screenshot: ${!!homepageScreenshot}, html: ${!!homepageHtml}`);
+    console.log(`[AI] aiLevel: ${aiLevel}, violations: ${violations.length}, screenshot: ${!!homepageScreenshot}, data: ${!!homepageData}`);
 
     if (aiLevel === 'basic' && violations.length > 0) {
       console.log('[AI] Running basic AI analysis...');
@@ -366,9 +462,9 @@ app.post('/api/scan', async (req, res) => {
       console.log('[AI] Basic AI result:', ai_analysis ? 'success' : 'null');
     } else if (aiLevel === 'advanced') {
       console.log('[AI] Running advanced AI analysis...');
-      if (homepageScreenshot && homepageHtml) {
-        console.log('[AI] Using advanced AI with screenshot');
-        ai_analysis = await runAdvancedAIAnalysis(homepageScreenshot, homepageHtml, violations);
+      if (homepageScreenshot && homepageData) {
+        console.log('[AI] Using advanced AI with screenshot and structured data');
+        ai_analysis = await runAdvancedAIAnalysis(homepageScreenshot, homepageData);
         console.log('[AI] Advanced AI result:', ai_analysis ? 'success' : 'null');
       } else if (violations.length > 0) {
         // Fallback to basic if screenshot capture failed
