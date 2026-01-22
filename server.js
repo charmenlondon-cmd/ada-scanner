@@ -11,16 +11,14 @@ const anthropic = new Anthropic({
 });
 
 // AI Analysis prompts
-const BASIC_AI_PROMPT = `Analyze these accessibility violations and provide a JSON response with:
-1. "summary": A 2-3 sentence summary of the main accessibility issues found
-2. "priority_fixes": Array of top 3 priority fixes, each with:
-   - "issue": Brief description
-   - "impact": "critical", "serious", "moderate", or "minor"
-   - "explanation": Plain-English explanation (no jargon) of why this matters
-   - "fix": Simple explanation of how to fix it
-3. "estimated_fix_time": Total estimated time to fix critical and serious issues
+const BASIC_AI_PROMPT = `Analyze these accessibility violations and provide a brief summary for guest users.
 
-Keep explanations simple and actionable. Focus on the most impactful issues first.`;
+Return ONLY valid JSON (no markdown, no code fences, no text before or after):
+{
+  "summary": "2-3 sentence plain-English overview of the main accessibility issues found and their impact on users"
+}
+
+IMPORTANT: Return ONLY the summary field. Do not include priority_fixes, estimated_fix_time, or any other fields. Keep it simple and actionable.`;
 
 const OPTIMIZED_ADVANCED_AI_PROMPT = `Analyze this webpage for accessibility issues that AUTOMATED TESTING CANNOT DETECT.
 
@@ -94,8 +92,21 @@ Return ONLY valid JSON (no markdown, no code fences, no text before or after):
     "current": "Grade X (calculated from textContent using Flesch-Kincaid or similar)",
     "target": "Grade 8",
     "recommendation": "Specific examples: 'Change \\"initiated\\" to \\"started\\", \\"utilize\\" to \\"use\\"'"
-  }
+  },
+  "priority_fixes": [
+    {
+      "rank": 1,
+      "issue": "Brief description of the most critical accessibility issue",
+      "impact": "critical|serious|moderate|minor",
+      "explanation": "Plain-English explanation of why this matters to users",
+      "fix": "Specific actionable fix with code example",
+      "estimated_time": "Time estimate (e.g., '2 hours', '30 minutes')"
+    }
+  ],
+  "estimated_fix_time": "Total time to fix all critical and serious issues (e.g., '14.5 hours for all critical and serious issues')"
 }
+
+CRITICAL: Return ONLY these exact fields (summary, visual_issues, content_issues, priority_fixes, reading_level, estimated_fix_time). Do not add extra fields like "ai_level", "scan_info", or any other properties. The dashboard is configured to display only these six fields.
 
 REMEMBER: Do not duplicate what axe-core already found. Focus only on visual inspection and semantic content quality that requires human judgment.`;
 
