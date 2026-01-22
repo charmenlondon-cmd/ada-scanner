@@ -295,9 +295,9 @@ async function extractAccessibilityData(page) {
     }
 
     return {
-      textContent: allText.substring(0, 10000),
+      textContent: allText,
       formElements: formElements,
-      interactiveElements: interactiveElements.slice(0, 100),
+      interactiveElements: interactiveElements,
       errorElements: errorElements,
       headings: headings,
       sensoryInstructions: textNodes,
