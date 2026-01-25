@@ -325,6 +325,33 @@ async function extractAccessibilityData(page) {
   return data;
 }
 
+// Normalize URL to prevent duplicate scanning of same page
+function normalizeUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    // Force HTTPS
+    url.protocol = 'https:';
+    // Remove trailing slash (except for root path)
+    if (url.pathname !== '/' && url.pathname.endsWith('/')) {
+      url.pathname = url.pathname.slice(0, -1);
+    }
+    // Remove default ports
+    url.port = '';
+    // Lowercase hostname
+    url.hostname = url.hostname.toLowerCase();
+    // Remove fragment
+    url.hash = '';
+    // Remove common tracking parameters
+    url.searchParams.delete('utm_source');
+    url.searchParams.delete('utm_medium');
+    url.searchParams.delete('utm_campaign');
+    url.searchParams.delete('ref');
+    return url.toString();
+  } catch {
+    return urlString; // Return original if parsing fails
+  }
+}
+
 app.post('/api/scan', async (req, res) => {
   try {
     const { website_url, customer_id, scan_id, email, company_name, plan, max_pages } = req.body;
@@ -345,7 +372,7 @@ app.post('/api/scan', async (req, res) => {
                     plan === 'guest' ? 'basic' : 'advanced'; // starter and professional get advanced
 
     const visited = new Set();
-    const toVisit = new Set([website_url]);
+    const toVisit = new Set([normalizeUrl(website_url)]);
     const violations = [];
     const startTime = Date.now();
 
@@ -387,13 +414,14 @@ app.post('/api/scan', async (req, res) => {
           });
       }, baseHostname);
 
-      return anchors.map(url => url.split('#')[0]); // remove fragments
+      return anchors.map(url => url.split('#')[0]); // remove fragments (further normalization done outside)
     }
 
     while (toVisit.size > 0 && visited.size < pageLimit) {
       const currentUrl = Array.from(toVisit)[0];
       toVisit.delete(currentUrl);
 
+      // URLs in toVisit are already normalized, but double-check
       if (visited.has(currentUrl)) continue;
 
       try {
@@ -449,10 +477,11 @@ app.post('/api/scan', async (req, res) => {
         console.log(`[SCAN] Progress: ${visited.size}/${pageLimit} pages, ${toVisit.size} queued`);
 
         internalLinks.forEach(link => {
-          if (!visited.has(link)) toVisit.add(link);
+          const normalizedLink = normalizeUrl(link);
+          if (!visited.has(normalizedLink)) toVisit.add(normalizedLink);
         });
 
-        visited.add(currentUrl);
+        visited.add(normalizeUrl(currentUrl));
         await page.close();
 
       } catch (error) {
