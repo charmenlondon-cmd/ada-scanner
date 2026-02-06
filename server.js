@@ -1,6 +1,13 @@
 import express from 'express';
 import puppeteer from 'puppeteer';
 import Anthropic from '@anthropic-ai/sdk';
+import { readFileSync } from 'fs';
+import { createRequire } from 'module';
+
+// Load axe-core script from node_modules for injection into pages
+const require = createRequire(import.meta.url);
+const axeCorePath = require.resolve('axe-core/axe.min.js');
+const axeCoreScript = readFileSync(axeCorePath, 'utf-8');
 
 const app = express();
 app.use(express.json());
@@ -439,8 +446,8 @@ app.post('/api/scan', async (req, res) => {
           console.log('[EXTRACTION] Stats:', homepageData.stats);
         }
 
-        // Load axe-core from CDN (WCAG 2.2 support)
-        await page.addScriptTag({ url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.3/axe.min.js' });
+        // Inject axe-core from local node_modules (WCAG 2.2 support)
+        await page.addScriptTag({ content: axeCoreScript });
 
         // Run axe-core scan with WCAG 2.2 Level AA tags
         const result = await page.evaluate(async () => {
