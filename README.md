@@ -45,7 +45,7 @@ Required fields:
 - `scan_id` - Unique scan identifier
 - `email` - Customer email
 - `company_name` - Customer company name
-- `plan` - Subscription plan (free, guest, starter, professional)
+- `plan` - Plan type: free (unpaid), guest ($25 one-time), essentials ($49/mo), professional ($99/mo)
 - `max_pages` (optional) - Maximum pages to scan (default: 50)
 
 **Request:**
@@ -93,9 +93,9 @@ Required fields:
 
 ## AI Analysis Levels
 
-- **none** (free plan): No AI analysis
-- **basic** (guest/payg plan): Summary, priority fixes, plain-English explanations
-- **advanced** (starter/professional plans): Screenshot + HTML analysis for visual issues, content issues, reading level, heading structure
+- **none** (free plan only): No AI analysis
+- **basic** (guest plan - $25 one-time): Summary, priority fixes, plain-English explanations
+- **advanced** (essentials $49/mo, professional $99/mo): Screenshot + HTML analysis for visual issues, content issues, reading level, heading structure
 
 ## Health Check
 **GET /health**

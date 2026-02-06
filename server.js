@@ -439,12 +439,17 @@ app.post('/api/scan', async (req, res) => {
           console.log('[EXTRACTION] Stats:', homepageData.stats);
         }
 
-        // Load axe-core from CDN
-        await page.addScriptTag({ url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js' });
+        // Load axe-core from CDN (WCAG 2.2 support)
+        await page.addScriptTag({ url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.3/axe.min.js' });
 
-        // Run axe-core scan
+        // Run axe-core scan with WCAG 2.2 Level AA tags
         const result = await page.evaluate(async () => {
-          return await axe.run();
+          return await axe.run({
+            runOnly: {
+              type: 'tag',
+              values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']
+            }
+          });
         });
 
         const scanDate = new Date().toISOString();
