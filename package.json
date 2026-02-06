@@ -12,7 +12,7 @@
     "@anthropic-ai/sdk": "^0.24.0",
     "axe-core": "^4.10.3",
     "express": "^4.18.2",
-    "puppeteer": "^22.0.0"
+    "puppeteer": "^24.37.1"
   },
   "engines": {
     "node": ">=18.0.0"
