@@ -17,152 +17,136 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// AI Analysis prompts
-const BASIC_AI_PROMPT = `Analyze these accessibility violations and provide a brief summary for guest users.
+// AI Prompts - Concise but complete versions
+const VIOLATION_EXPLANATION_PROMPT = `Explain this accessibility violation to a non-technical website owner:
 
-Return ONLY valid JSON (no markdown, no code fences, no text before or after):
+Rule: {rule_id}
+Impact: {impact}
+Description: {description}
+Affected element: {html_snippet}
+Selector: {target}
+
+Return JSON only:
 {
-  "summary": "2-3 sentence plain-English overview of the main accessibility issues found and their impact on users"
+  "explanation": "What this means in plain English",
+  "impact_on_users": "How this affects people with disabilities",
+  "fix_steps": "Numbered steps to fix this specific element",
+  "code_before": "Current problematic code",
+  "code_after": "Corrected code",
+  "estimated_time": "realistic time estimate"
 }
 
-IMPORTANT: Return ONLY the summary field. Do not include priority_fixes, estimated_fix_time, or any other fields. Keep it simple and actionable.`;
+Be specific to THIS element. Include actual values (colors, sizes, text) from the HTML provided.`;
 
-const OPTIMIZED_ADVANCED_AI_PROMPT = `Analyze this webpage for accessibility issues that AUTOMATED TESTING CANNOT DETECT.
+const PAGE_ANALYSIS_PROMPT = `Analyze this screenshot and structured data for accessibility issues that automated tools cannot detect.
 
-You have:
-1. A screenshot of the page
-2. Complete structured accessibility data extracted from the HTML
+Automated testing already checked: links, images, contrast, forms, ARIA, headings, landmarks, keyboard access, page structure.
 
-IMPORTANT: This website has already been scanned with axe-core automated testing tool. Axe-core has ALREADY checked and reported on the following issues (DO NOT re-analyze these):
+You must check ONLY:
+1. Visual (screenshot): Touch targets <44px, focus indicators, text-in-images, layout issues
+2. Content (data): Reading level >Grade 8, placeholder-only labels, generic link text, unclear error messages, sensory-dependent instructions
 
-AUTOMATED CHECKS ALREADY COMPLETED BY AXE-CORE:
-✓ Link text (links without discernible text, empty links)
-✓ Image alt text (missing alt attributes, empty alt text)
-✓ Color contrast ratios (text vs background contrast, WCAG AA/AAA compliance)
-✓ Form labels (inputs without labels, missing label associations)
-✓ Button names (buttons without accessible names)
-✓ ARIA attributes (invalid ARIA roles, missing ARIA labels, incorrect ARIA usage)
-✓ Page structure (missing <main> landmark, missing h1, duplicate IDs)
-✓ Heading hierarchy (skipped heading levels, multiple h1s)
-✓ Landmark regions (content not in landmarks, missing navigation landmarks)
-✓ HTML lang attribute (missing or invalid lang declarations)
-✓ Keyboard accessibility (skip links, focusable elements)
-✓ Document title (missing or empty <title> tags)
-✓ Table structure (missing table headers, invalid table markup)
-✓ List structure (improper list markup)
+Use provided data: textContent (reading level), formElements.hasPlaceholderOnly, interactiveElements.isGeneric, errorElements, sensoryInstructions.
 
-DO NOT analyze any of the above issues. Axe-core has already detected and reported them.
-
-FOCUS ONLY ON THESE ISSUES (which automated tools CANNOT detect):
-
-1. VISUAL ANALYSIS (from screenshot only):
-   - Touch target sizes: Are interactive elements at least 44x44 pixels? Measure visible buttons, links, and icons in the screenshot
-   - Focus indicators: Are keyboard focus outlines visible and meet 3:1 contrast? Can you see them in the screenshot?
-   - Text in images: Is there text that's part of an image file instead of real HTML text?
-   - Visual layout: Is content overlapping, spacing inadequate, or layout confusing?
-
-2. CONTENT QUALITY ANALYSIS (from structured data):
-   - Reading level: Analyze textContent field. Calculate Flesch-Kincaid grade level. Target is Grade 8 for general audiences.
-   - Placeholder-only labels: Check formElements where hasPlaceholderOnly=true (placeholders disappear on focus, violating WCAG)
-   - Generic link text: Check interactiveElements where isGeneric=true ("click here", "read more" without context)
-   - Error message quality: Check errorElements - are messages helpful and actionable? Do they explain HOW to fix the error?
-   - Sensory instructions: Check sensoryInstructions array for text relying only on color/position (e.g., "click the red button", "item on the right")
-
-CRITICAL RULES:
-- If axe-core would detect it, DO NOT mention it
-- Be specific to THIS page - use exact locations and examples from the data provided
-- Only flag REAL problems that affect users - not theoretical issues
-- Provide actionable fixes with code examples
-
-Return ONLY valid JSON (no markdown, no code fences, no text before or after):
+Return JSON only:
 {
-  "summary": "1-2 sentence overview of issues that automated testing missed (not issues axe-core found)",
-  "visual_issues": [
-    {
-      "type": "touch_target|focus_indicator|text_in_image|layout",
-      "description": "Specific issue with exact location from screenshot",
-      "location": "Precise location (e.g., 'Top navigation phone number link at coordinates X,Y')",
-      "wcag_criterion": "Full criterion (e.g., 2.5.5 Target Size - Level AAA)",
-      "recommendation": "Specific fix with CSS example: button { min-width: 44px; min-height: 44px; }"
-    }
-  ],
-  "content_issues": [
-    {
-      "type": "reading_level|placeholder_labels|generic_links|error_messages|sensory_instructions",
-      "description": "Specific issue",
-      "examples": ["Exact quotes from textContent or formElements data"],
-      "wcag_criterion": "Full criterion (e.g., 3.1.5 Reading Level - Level AAA)",
-      "recommendation": "Before/after example showing simplified text"
-    }
-  ],
-  "reading_level": {
-    "current": "Grade X (calculated from textContent using Flesch-Kincaid or similar)",
-    "target": "Grade 8",
-    "recommendation": "Specific examples: 'Change \\"initiated\\" to \\"started\\", \\"utilize\\" to \\"use\\"'"
-  },
-  "priority_fixes": [
-    {
-      "rank": 1,
-      "issue": "Brief description of the most critical accessibility issue",
-      "impact": "critical|serious|moderate|minor",
-      "explanation": "Plain-English explanation of why this matters to users",
-      "fix": "Specific actionable fix with code example",
-      "estimated_time": "Time estimate (e.g., '2 hours', '30 minutes')"
-    }
-  ],
-  "estimated_fix_time": "Total time to fix all critical and serious issues (e.g., '14.5 hours for all critical and serious issues')"
+  "summary": "1-2 sentence overview",
+  "visual_issues": [{"type": "touch_target|focus_indicator|text_in_image|layout", "description": "specific issue with location", "wcag": "criterion", "fix": "code example"}],
+  "content_issues": [{"type": "reading_level|placeholder|generic_links|error_messages|sensory", "examples": ["exact quotes"], "wcag": "criterion", "fix": "before/after"}],
+  "priority_fixes": [{"rank": 1, "issue": "brief", "impact": "critical|serious|moderate|minor", "fix": "specific solution", "time": "estimate"}]
 }
 
-CRITICAL: Return ONLY these exact fields (summary, visual_issues, content_issues, priority_fixes, reading_level, estimated_fix_time). Do not add extra fields like "ai_level", "scan_info", or any other properties. The dashboard is configured to display only these six fields.
+Be specific. Use exact locations and values from the data.`;
 
-REMEMBER: Do not duplicate what axe-core already found. Focus only on visual inspection and semantic content quality that requires human judgment.`;
+// Function to explain violations using AI
+async function explainViolations(violations) {
+  if (!violations || violations.length === 0) return [];
 
-// Function to run Basic AI analysis
-async function runBasicAIAnalysis(violations) {
   try {
-    const violationSummary = violations.map(v => ({
-      rule: v.rule_id,
-      impact: v.impact,
-      description: v.description,
-      page: v.page_url
+    // Group violations by rule_id to reduce API calls
+    const violationsByRule = {};
+    violations.forEach(v => {
+      if (!violationsByRule[v.rule_id]) {
+        violationsByRule[v.rule_id] = [];
+      }
+      violationsByRule[v.rule_id].push(v);
+    });
+
+    console.log(`[AI EXPLAIN] Processing ${Object.keys(violationsByRule).length} violation types`);
+
+    // Process each violation type with AI
+    const explanationPromises = Object.entries(violationsByRule).map(async ([ruleId, ruleViolations]) => {
+      try {
+        const firstViolation = ruleViolations[0];
+
+        // Build prompt with specific violation data
+        const prompt = VIOLATION_EXPLANATION_PROMPT
+          .replace('{rule_id}', firstViolation.rule_id)
+          .replace('{impact}', firstViolation.impact)
+          .replace('{description}', firstViolation.description)
+          .replace('{html_snippet}', 'Element at selector: ' + firstViolation.element_selector)
+          .replace('{target}', firstViolation.element_selector);
+
+        const message = await anthropic.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: prompt
+          }]
+        });
+
+        const responseText = message.content[0].text;
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+          const explanation = JSON.parse(jsonMatch[0]);
+          return { ruleId, explanation };
+        }
+
+        return { ruleId, explanation: null };
+      } catch (error) {
+        console.error(`[AI EXPLAIN] Error explaining ${ruleId}:`, error.message);
+        return { ruleId, explanation: null };
+      }
+    });
+
+    // Wait for all explanations with staggered delays to avoid rate limits
+    const explanations = [];
+    for (let i = 0; i < explanationPromises.length; i++) {
+      if (i > 0) {
+        // Add 500ms delay between API calls to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      explanations.push(await explanationPromises[i]);
+    }
+
+    // Map explanations back to violations
+    const explanationMap = {};
+    explanations.forEach(({ ruleId, explanation }) => {
+      if (explanation) {
+        explanationMap[ruleId] = explanation;
+      }
+    });
+
+    // Add explanations to each violation
+    return violations.map(v => ({
+      ...v,
+      ai_explanation: explanationMap[v.rule_id] || null
     }));
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: `${BASIC_AI_PROMPT}\n\nViolations found:\n${JSON.stringify(violationSummary, null, 2)}`
-        }
-      ]
-    });
-
-    const responseText = message.content[0].text;
-    // Extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return { summary: responseText, priority_fixes: [], estimated_fix_time: "Unable to estimate" };
   } catch (error) {
-    console.error('Basic AI analysis error:', error.message);
-    console.error('Full error details:', {
-      type: error.type,
-      status: error.status,
-      message: error.message,
-      error: error.error
-    });
-    return null;
+    console.error('[AI EXPLAIN] Fatal error:', error);
+    return violations; // Return original violations without explanations
   }
 }
 
-// Function to run Advanced AI analysis
+// Function to run Advanced AI page analysis
 async function runAdvancedAIAnalysis(screenshot, accessibilityData) {
   try {
     const formattedData = `
 COMPLETE PAGE TEXT (for reading level analysis):
-${accessibilityData.textContent}
+${accessibilityData.textContent.substring(0, 10000)}
 
 STATISTICS:
 - Total forms: ${accessibilityData.stats.totalForms}
@@ -173,8 +157,8 @@ STATISTICS:
 FORM ELEMENTS (ALL ${accessibilityData.formElements.length} inputs captured):
 ${JSON.stringify(accessibilityData.formElements, null, 2)}
 
-INTERACTIVE ELEMENTS (first 50 of ${accessibilityData.interactiveElements.length}):
-${JSON.stringify(accessibilityData.interactiveElements.slice(0, 50), null, 2)}
+INTERACTIVE ELEMENTS (first 30 of ${accessibilityData.interactiveElements.length}):
+${JSON.stringify(accessibilityData.interactiveElements.slice(0, 30), null, 2)}
 
 ERROR/VALIDATION ELEMENTS:
 ${JSON.stringify(accessibilityData.errorElements, null, 2)}
@@ -184,8 +168,8 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
 `;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1536,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
       messages: [
         {
           role: "user",
@@ -200,7 +184,7 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
             },
             {
               type: "text",
-              text: `${OPTIMIZED_ADVANCED_AI_PROMPT}\n\n${formattedData}`
+              text: `${PAGE_ANALYSIS_PROMPT}\n\n${formattedData}`
             }
           ]
         }
@@ -229,10 +213,10 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
       try {
         return JSON.parse(jsonMatch[0]);
       } catch (parseError) {
-        console.error('JSON parse error:', parseError.message);
-        console.error('Attempted to parse:', jsonMatch[0].substring(0, 500));
+        console.error('[AI PAGE] JSON parse error:', parseError.message);
+        console.error('[AI PAGE] Attempted to parse:', jsonMatch[0].substring(0, 500));
         return {
-          summary: 'AI analysis generated but could not be parsed. Please contact support.',
+          summary: 'AI analysis generated but could not be parsed.',
           visual_issues: [],
           content_issues: [],
           _parseError: parseError.message
@@ -241,13 +225,10 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
     }
     return { summary: responseText, visual_issues: [], content_issues: [] };
   } catch (error) {
-    console.error('Advanced AI analysis error:', error.message);
-    console.error('Full error details:', {
-      type: error.type,
-      status: error.status,
-      message: error.message,
-      error: error.error
-    });
+    console.error('[AI PAGE] Error:', error.message);
+    if (error.error) {
+      console.error('[AI PAGE] API error details:', error.error);
+    }
     return null;
   }
 }
@@ -255,10 +236,10 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
 // Extract structured accessibility data from page for AI analysis
 async function extractAccessibilityData(page) {
   const data = await page.evaluate(() => {
-    // 1. Extract ALL text content for reading level analysis
-    const allText = document.body.innerText || document.body.textContent;
+    // 1. Extract text content for reading level analysis (limited to first 50k chars)
+    const allText = (document.body.innerText || document.body.textContent).substring(0, 50000);
 
-    // 2. Extract ALL form elements (inputs, textareas, selects)
+    // 2. Extract form elements (inputs, textareas, selects)
     const formElements = Array.from(document.querySelectorAll('input, textarea, select')).map(el => ({
       type: el.type || el.tagName.toLowerCase(),
       placeholder: el.placeholder || null,
@@ -270,7 +251,7 @@ async function extractAccessibilityData(page) {
       hasPlaceholderOnly: !!(el.placeholder && !el.labels?.length && !el.getAttribute('aria-label'))
     }));
 
-    // 3. Extract ALL buttons and links (for context analysis)
+    // 3. Extract buttons and links (for context analysis)
     const interactiveElements = Array.from(document.querySelectorAll('button, a[href]')).map(el => ({
       tag: el.tagName.toLowerCase(),
       text: el.textContent?.trim() || null,
@@ -281,7 +262,7 @@ async function extractAccessibilityData(page) {
       )
     }));
 
-    // 4. Extract ALL error/validation messages
+    // 4. Extract error/validation messages
     const errorElements = Array.from(document.querySelectorAll(
       '[role="alert"], [aria-invalid="true"], .error, .error-message, [aria-live="polite"], [aria-live="assertive"]'
     )).map(el => ({
@@ -290,13 +271,7 @@ async function extractAccessibilityData(page) {
       ariaLive: el.getAttribute('aria-live')
     }));
 
-    // 5. Extract heading structure (for semantic analysis)
-    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(el => ({
-      level: parseInt(el.tagName[1]),
-      text: el.textContent?.trim()
-    }));
-
-    // 6. Check for sensory-dependent instructions in visible text
+    // 5. Check for sensory-dependent instructions in visible text
     const textNodes = [];
     const walker = document.createTreeWalker(
       document.body,
@@ -317,14 +292,13 @@ async function extractAccessibilityData(page) {
       formElements: formElements,
       interactiveElements: interactiveElements,
       errorElements: errorElements,
-      headings: headings,
       sensoryInstructions: textNodes,
       stats: {
         totalForms: formElements.length,
         totalButtons: interactiveElements.filter(el => el.tag === 'button').length,
         totalLinks: interactiveElements.filter(el => el.tag === 'a').length,
-        totalHeadings: headings.length,
-        hasPlaceholderOnlyInputs: formElements.filter(el => el.hasPlaceholderOnly).length
+        hasPlaceholderOnlyInputs: formElements.filter(el => el.hasPlaceholderOnly).length,
+        hasForms: formElements.length > 0
       }
     };
   });
@@ -376,18 +350,18 @@ app.post('/api/scan', async (req, res) => {
 
     // Determine AI analysis level based on plan
     const aiLevel = plan === 'free' ? 'none' :
-                    plan === 'guest' ? 'basic' : 'advanced'; // starter and professional get advanced
+                    plan === 'guest' ? 'basic' : 'advanced'; // essentials and professional get advanced
 
     const visited = new Set();
     const toVisit = new Set([normalizeUrl(website_url)]);
     const violations = [];
     const startTime = Date.now();
 
-    // For advanced AI: capture screenshot and structured data of homepage
-    let homepageScreenshot = null;
-    let homepageData = null;
+    // Track important pages for AI analysis
+    const importantPages = [];
+    const pageViolationCounts = new Map();
 
-    // Launch browser with Railway-optimized settings
+    // Launch browser
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -421,7 +395,7 @@ app.post('/api/scan', async (req, res) => {
           });
       }, baseHostname);
 
-      return anchors.map(url => url.split('#')[0]); // remove fragments (further normalization done outside)
+      return anchors.map(url => url.split('#')[0]); // remove fragments
     }
 
     while (toVisit.size > 0 && visited.size < pageLimit) {
@@ -436,14 +410,22 @@ app.post('/api/scan', async (req, res) => {
         await page.setViewport({ width: 1280, height: 800 });
         await page.goto(currentUrl, { waitUntil: "networkidle2", timeout: 30000 });
 
-        // Capture screenshot and extract structured data for homepage (first page) if advanced AI
-        if (visited.size === 0 && aiLevel === 'advanced') {
-          homepageScreenshot = await page.screenshot({
-            encoding: 'base64',
-            fullPage: false
-          });
-          homepageData = await extractAccessibilityData(page);
-          console.log('[EXTRACTION] Stats:', homepageData.stats);
+        // Check if this is an important page for AI analysis
+        let isImportantPage = false;
+        let pageData = null;
+        let pageScreenshot = null;
+
+        // Always mark homepage as important
+        if (visited.size === 0) {
+          isImportantPage = true;
+        }
+
+        // Check if page has forms (important for accessibility)
+        if (aiLevel === 'advanced' && !isImportantPage) {
+          pageData = await extractAccessibilityData(page);
+          if (pageData.stats.hasForms) {
+            isImportantPage = true;
+          }
         }
 
         // Inject axe-core from local node_modules (WCAG 2.2 support)
@@ -460,6 +442,32 @@ app.post('/api/scan', async (req, res) => {
         });
 
         const scanDate = new Date().toISOString();
+        const pageViolationCount = result.violations.length;
+        pageViolationCounts.set(currentUrl, pageViolationCount);
+
+        // Mark pages with high violation counts as important
+        if (aiLevel === 'advanced' && !isImportantPage && pageViolationCount >= 5) {
+          isImportantPage = true;
+        }
+
+        // Capture screenshot and data for important pages
+        if (aiLevel === 'advanced' && isImportantPage && importantPages.length < 10) {
+          if (!pageData) {
+            pageData = await extractAccessibilityData(page);
+          }
+          pageScreenshot = await page.screenshot({
+            encoding: 'base64',
+            fullPage: false
+          });
+
+          importantPages.push({
+            url: currentUrl,
+            screenshot: pageScreenshot,
+            data: pageData
+          });
+
+          console.log(`[AI PAGE] Marked as important: ${currentUrl} (forms: ${pageData.stats.hasForms}, violations: ${pageViolationCount})`);
+        }
 
         // Extract violations
         result.violations.forEach((v, i) => {
@@ -479,13 +487,11 @@ app.post('/api/scan', async (req, res) => {
           });
         });
 
-        // Get internal links for crawling (use currentUrl to handle redirects properly)
+        // Get internal links for crawling
         const internalLinks = await getInternalLinks(page, currentUrl);
 
-        // Debug logging for troubleshooting
         console.log(`[SCAN] Visited: ${currentUrl}`);
-        console.log(`[SCAN] Found ${internalLinks.length} internal links`);
-        console.log(`[SCAN] Sample links:`, internalLinks.slice(0, 3));
+        console.log(`[SCAN] Violations: ${pageViolationCount}, Forms: ${pageData?.stats.hasForms || 'not checked'}`);
         console.log(`[SCAN] Progress: ${visited.size}/${pageLimit} pages, ${toVisit.size} queued`);
 
         internalLinks.forEach(link => {
@@ -504,28 +510,48 @@ app.post('/api/scan', async (req, res) => {
     await browser.close();
 
     // Run AI analysis based on plan
-    let ai_analysis = null;
+    let ai_page_analysis = [];
+    let violationsWithExplanations = violations;
 
-    console.log(`[AI] aiLevel: ${aiLevel}, violations: ${violations.length}, screenshot: ${!!homepageScreenshot}, data: ${!!homepageData}`);
+    console.log(`[AI] Level: ${aiLevel}, Violations: ${violations.length}, Important pages: ${importantPages.length}`);
 
-    if (aiLevel === 'basic' && violations.length > 0) {
-      console.log('[AI] Running basic AI analysis...');
-      ai_analysis = await runBasicAIAnalysis(violations);
-      console.log('[AI] Basic AI result:', ai_analysis ? 'success' : 'null');
-    } else if (aiLevel === 'advanced') {
-      console.log('[AI] Running advanced AI analysis...');
-      if (homepageScreenshot && homepageData) {
-        console.log('[AI] Using advanced AI with screenshot and structured data');
-        ai_analysis = await runAdvancedAIAnalysis(homepageScreenshot, homepageData);
-        console.log('[AI] Advanced AI result:', ai_analysis ? 'success' : 'null');
-      } else if (violations.length > 0) {
-        // Fallback to basic if screenshot capture failed
-        console.log('[AI] Screenshot missing, falling back to basic AI');
-        ai_analysis = await runBasicAIAnalysis(violations);
-        console.log('[AI] Basic AI fallback result:', ai_analysis ? 'success' : 'null');
-      } else {
-        console.log('[AI] No violations and no screenshot, skipping AI analysis');
+    if (aiLevel === 'advanced') {
+      // Explain all violations
+      if (violations.length > 0) {
+        console.log('[AI] Generating violation explanations...');
+        violationsWithExplanations = await explainViolations(violations);
+        console.log('[AI] Violation explanations complete');
       }
+
+      // Analyze important pages
+      if (importantPages.length > 0) {
+        console.log(`[AI] Analyzing ${importantPages.length} important pages...`);
+
+        for (let i = 0; i < importantPages.length; i++) {
+          const pageInfo = importantPages[i];
+
+          // Add delay between API calls to avoid rate limits
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+          const analysis = await runAdvancedAIAnalysis(pageInfo.screenshot, pageInfo.data);
+
+          if (analysis) {
+            ai_page_analysis.push({
+              page_url: pageInfo.url,
+              analysis: analysis
+            });
+          }
+        }
+
+        console.log(`[AI] Page analysis complete: ${ai_page_analysis.length} pages analyzed`);
+      }
+    } else if (aiLevel === 'basic' && violations.length > 0) {
+      // For basic tier (guest), just provide simple explanations
+      console.log('[AI] Generating basic violation explanations...');
+      violationsWithExplanations = await explainViolations(violations);
+      console.log('[AI] Basic explanations complete');
     }
 
     const scanDuration = Math.round((Date.now() - startTime) / 1000);
@@ -549,11 +575,10 @@ app.post('/api/scan', async (req, res) => {
     const complianceScore = Math.max(0, 100 - violations.length * 5);
 
     // Convert visited Set to comma-separated string for Google Sheets storage
-    // This prevents JSON.stringify issues when writing to sheets
     const scannedPageUrls = Array.from(visited).join(',');
 
     return res.status(200).json({
-      violations,
+      violations: violationsWithExplanations,
       complianceScore,
       total_violations: violations.length,
       critical_count: violations.filter(v => v.impact === "critical").length,
@@ -573,10 +598,11 @@ app.post('/api/scan', async (req, res) => {
       scan_date: new Date().toISOString(),
       scan_duration_seconds: scanDuration,
       status: "completed",
-      scanner_version: "axe-core 4.10.0 + puppeteer + Claude Sonnet 4.5 (Cloud Run)",
+      scanner_version: "axe-core 4.10.3 + puppeteer + Claude Haiku 4.5 (Cloud Run)",
       scan_method: "Self-hosted Puppeteer + axe-core + Claude AI",
-      ai_analysis,
-      ai_level: aiLevel
+      ai_page_analysis,
+      ai_level: aiLevel,
+      important_pages_analyzed: importantPages.length
     });
 
   } catch (error) {
