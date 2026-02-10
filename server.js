@@ -600,7 +600,7 @@ app.post('/api/scan', async (req, res) => {
       status: "completed",
       scanner_version: "axe-core 4.10.3 + puppeteer + Claude Haiku 4.5 (Cloud Run)",
       scan_method: "Self-hosted Puppeteer + axe-core + Claude AI",
-      ai_page_analysis,
+      ai_analysis: ai_page_analysis,
       ai_level: aiLevel,
       important_pages_analyzed: importantPages.length
     });
