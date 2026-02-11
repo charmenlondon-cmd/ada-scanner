@@ -233,6 +233,113 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
   }
 }
 
+// Aggregate AI analyses from multiple pages into structured summary
+function aggregateAIAnalyses(ai_page_analysis) {
+  if (!ai_page_analysis || !Array.isArray(ai_page_analysis) || ai_page_analysis.length === 0) {
+    return {
+      overall_summary: "No AI analysis available",
+      stats: { pages_analyzed: 0, total_issues: 0, total_priority_fixes: 0 },
+      page_analyses: [],
+      aggregated_priority_fixes: [],
+      // Backward compatibility
+      summary: "No AI analysis available",
+      priority_fixes: [],
+      visual_issues: [],
+      content_issues: []
+    };
+  }
+
+  const stats = {
+    pages_analyzed: ai_page_analysis.length,
+    total_issues: 0,
+    total_priority_fixes: 0
+  };
+
+  const allPriorityFixes = [];
+  const allVisualIssues = [];
+  const allContentIssues = [];
+
+  // Extract all issues from all pages
+  ai_page_analysis.forEach(pageData => {
+    const analysis = pageData.analysis;
+    if (!analysis) return;
+
+    const pageUrl = pageData.page_url;
+
+    // Add page_url to each item and collect
+    if (Array.isArray(analysis.priority_fixes)) {
+      analysis.priority_fixes.forEach(fix => {
+        allPriorityFixes.push({ ...fix, page_url: pageUrl });
+      });
+      stats.total_priority_fixes += analysis.priority_fixes.length;
+    }
+
+    if (Array.isArray(analysis.visual_issues)) {
+      analysis.visual_issues.forEach(issue => {
+        allVisualIssues.push({ ...issue, page_url: pageUrl });
+      });
+    }
+
+    if (Array.isArray(analysis.content_issues)) {
+      analysis.content_issues.forEach(issue => {
+        allContentIssues.push({ ...issue, page_url: pageUrl });
+      });
+    }
+  });
+
+  stats.total_issues = allPriorityFixes.length + allVisualIssues.length + allContentIssues.length;
+
+  // Group similar fixes across pages
+  const fixGroups = new Map();
+  allPriorityFixes.forEach(fix => {
+    // Create a key based on issue text (first 100 chars normalized)
+    const issueKey = (fix.issue || '').toLowerCase().substring(0, 100).trim();
+
+    if (!fixGroups.has(issueKey)) {
+      fixGroups.set(issueKey, {
+        ...fix,
+        pages_affected: [fix.page_url]
+      });
+    } else {
+      const existing = fixGroups.get(issueKey);
+      if (!existing.pages_affected.includes(fix.page_url)) {
+        existing.pages_affected.push(fix.page_url);
+      }
+    }
+  });
+
+  // Convert to array and sort by impact, then by frequency
+  const impactOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+  const aggregated_priority_fixes = Array.from(fixGroups.values())
+    .sort((a, b) => {
+      const impactDiff = (impactOrder[a.impact] || 4) - (impactOrder[b.impact] || 4);
+      if (impactDiff !== 0) return impactDiff;
+      return b.pages_affected.length - a.pages_affected.length;
+    })
+    .map((fix, index) => ({
+      rank: index + 1,
+      ...fix
+    }));
+
+  // Generate overall summary
+  const criticalCount = aggregated_priority_fixes.filter(f => f.impact === 'critical').length;
+  const overall_summary = `AI analyzed ${stats.pages_analyzed} page${stats.pages_analyzed !== 1 ? 's' : ''}, ` +
+    `found ${stats.total_issues} accessibility issue${stats.total_issues !== 1 ? 's' : ''} that automated testing cannot detect. ` +
+    (criticalCount > 0 ? `${criticalCount} critical issue${criticalCount !== 1 ? 's' : ''} require${criticalCount === 1 ? 's' : ''} immediate attention.` : '');
+
+  return {
+    overall_summary,
+    stats,
+    page_analyses: ai_page_analysis,
+    aggregated_priority_fixes,
+    // Backward compatibility fields
+    summary: overall_summary,
+    priority_fixes: aggregated_priority_fixes,
+    visual_issues: allVisualIssues,
+    content_issues: allContentIssues
+  };
+}
+
 // Extract structured accessibility data from page for AI analysis
 async function extractAccessibilityData(page) {
   const data = await page.evaluate(() => {
@@ -600,7 +707,7 @@ app.post('/api/scan', async (req, res) => {
       status: "completed",
       scanner_version: "axe-core 4.10.3 + puppeteer + Claude Haiku 4.5 (Cloud Run)",
       scan_method: "Self-hosted Puppeteer + axe-core + Claude AI",
-      ai_analysis: ai_page_analysis,
+      ai_analysis: aggregateAIAnalyses(ai_page_analysis),
       ai_level: aiLevel,
       important_pages_analyzed: importantPages.length
     });
