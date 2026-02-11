@@ -90,6 +90,7 @@ async function explainViolations(violations) {
         const message = await anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 1024,
+          temperature: 0,
           messages: [{
             role: "user",
             content: prompt
@@ -170,6 +171,7 @@ ${JSON.stringify(accessibilityData.sensoryInstructions, null, 2)}
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2048,
+      temperature: 0,
       messages: [
         {
           role: "user",
